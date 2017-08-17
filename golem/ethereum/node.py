@@ -122,6 +122,8 @@ class NodeProcess(object):
                                       'init', init_file], **pipes)
         init_subp.wait()
         if init_subp.returncode != 0:
+            log.error(
+                "geth init failed with code {}".format(init_subp.returncode))
             raise OSError(
                 "geth init failed with code {}".format(init_subp.returncode))
 
