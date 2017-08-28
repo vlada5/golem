@@ -2,6 +2,7 @@ import logging
 import sys
 import time
 import json
+from os import path
 
 from ethereum import abi, utils, keys
 from ethereum.transactions import Transaction
@@ -13,6 +14,7 @@ from golem.transactions.service import Service
 from golem.utils import decode_hex, encode_hex
 from .contracts import TestGNT
 from .node import ropsten_faucet_donate
+from .accounts import Account
 
 log = logging.getLogger("golem.pay")
 
@@ -37,7 +39,9 @@ def _encode_payments(payments):
         v = utils.zpad(utils.int_to_big_endian(v), 12)
         pair = v + to
         if len(pair) != 32:
-            raise ValueError("Incorrect pair length: {}. Should be 32".format(len(pair)))
+            raise ValueError(
+                "Incorrect pair length: {}. Should be 32".format(len(pair))
+            )
         args.append(pair)
     return args, value
 
@@ -62,9 +66,8 @@ class PaymentProcessor(Service):
 
     SYNC_CHECK_INTERVAL = 10
 
-    def __init__(self, client, privkey, faucet=False):
+    def __init__(self, client, account_password: bytes, faucet=False):
         self.__client = client
-        self.__privkey = privkey
         self.__eth_balance = None
         self.__gnt_balance = None
         self.__gnt_reserved = 0
@@ -79,6 +82,16 @@ class PaymentProcessor(Service):
         self.deadline = sys.maxsize
         self.load_from_db()
         super(PaymentProcessor, self).__init__(13)
+
+        keystore_file = path.join(client.node.datadir,
+                                  'golem_ethereum_account.json')
+        if path.exists(keystore_file):
+            self.account = Account.load(keystore_file, account_password)
+        else:
+            self.account = Account.new(account_password, path=keystore_file)
+            self.account.save()
+        log.info("Account {} unlocked ({})".format(self.account.address.hex(),
+                                                   self.account.path))
 
     def synchronized(self):
         """ Checks if the Ethereum node is in sync with the network."""

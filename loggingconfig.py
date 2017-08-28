@@ -59,7 +59,11 @@ LOGGING = {
             'propagate': True,
         },
         'golem.ethereum': {
-            'level': 'INFO',
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'golem.pay': {
+            'level': 'DEBUG',
             'propagate': True,
         },
         'golem.rpc.crossbar': {

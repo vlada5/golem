@@ -17,26 +17,18 @@ log = logging.getLogger('golem.pay')
 class EthereumTransactionSystem(TransactionSystem):
     """ Transaction system connected with Ethereum """
 
-    def __init__(self, datadir, node_priv_key, port=None):
+    def __init__(self, datadir, account_password: bytes, port=None):
         """ Create new transaction system instance for node with given id
-        :param node_priv_key str: node's private key for Ethereum account (32b)
+        :param account_password bytes: password for Ethereum account
         """
         super(EthereumTransactionSystem, self).__init__(
             incomes_keeper_class=EthereumIncomesKeeper
         )
 
-        # FIXME: Passing private key all around might be a security issue.
-        #        Proper account managment is needed.
-        if not isinstance(node_priv_key, str)\
-                or len(node_priv_key) != 64:
-            raise ValueError("Invalid private key: {}".format(node_priv_key))
-        self.__node_address = b'0x' + privtoaddr(node_priv_key)
-        log.info("Node Ethereum address: " + self.get_payment_address())
-
         self.__eth_node = self.incomes_keeper.eth_node = Client(datadir, port)
         payment_processor = PaymentProcessor(
             self.__eth_node,
-            node_priv_key,
+            account_password,
             faucet=True
         )
         self.__proc = self.incomes_keeper.processor = payment_processor
@@ -58,7 +50,7 @@ class EthereumTransactionSystem(TransactionSystem):
 
     def get_payment_address(self):
         """ Human readable Ethereum address for incoming payments."""
-        return '0x' + encode_hex(self.__node_address)
+        return '0x' + self.__proc.account.address.hex()
 
     def get_balance(self):
         if not self.__proc.balance_known():
