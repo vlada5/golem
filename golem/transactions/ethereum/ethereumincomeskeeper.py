@@ -20,7 +20,7 @@ class EthereumIncomesKeeper(IncomesKeeper):
         self.processor.start()
 
     def stop(self):
-        if self.processor.running:
+         if self.processor.running:
             self.processor.stop()
 
     def received(self, sender_node_id, task_id, subtask_id, transaction_id,
