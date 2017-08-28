@@ -165,53 +165,22 @@ class TestEthereumIncomesKeeper(testutils.DatabaseFixture, testutils.PEP8MixIn):
             },
         ]
 
-        inco = self.instance.received(**received_kwargs)
+        self.instance.received(**received_kwargs)
 
-        from golem.model import Income
-        # with db.atomic():
-        #     getincome = Income.get(sender_node=received_kwargs['sender_node_id'], task=received_kwargs['task_id'], subtask=received_kwargs['subtask_id'])
-        #     x =3
 
-        income = model.Income.select().where(
-                model.Income.subtask == received_kwargs['subtask_id'])
-
-        # self.assertEqual(
-        #     1,
-        #     model.Income.select().where(
-        #         model.Income.subtask == received_kwargs['subtask_id']
-        #     )
-        #     .count()
-        # )
-
-        import time
-        BIG_INT = 2 ** 63 - 1  # (9,223,372,036,854,775,807)
-        def generate_some_id(prefix='test'):
-            return "%s-%d-%d" % (prefix, time.time() * 1000, random.random() * 1000)
-
-        sender_node_id = generate_some_id('sender_node_id')
-        task_id = generate_some_id('task_id')
-        subtask_id = generate_some_id('subtask_id')
-        value = random.randint(BIG_INT+1, BIG_INT+10)
-        transaction_id = generate_some_id('transaction_id')
-        block_number = random.randint(0, sys.maxsize)
-
-        from golem.transactions.incomeskeeper import IncomesKeeper
-
-        incomes_keeper = IncomesKeeper()
-        income2 = incomes_keeper.received(
-            sender_node_id=sender_node_id,
-            task_id=task_id,
-            subtask_id=subtask_id,
-            transaction_id=transaction_id,
-            block_number=block_number,
-            value=value
-        )
-
+        # check the the income is in db
         with db.atomic():
-            income = Income.get(sender_node=sender_node_id, task=task_id, subtask=subtask_id)
-        self.assertEqual(income.value, value)
-        self.assertEqual(income.transaction, transaction_id)
-        self.assertEqual(income.block_number, block_number)
+            self.assertEqual(
+                1,
+                model.Income.select().where(
+                    model.Income.subtask == received_kwargs['subtask_id']
+                )
+                    .count()
+            )
+            getincome = model.Income.get(sender_node=received_kwargs['sender_node_id'], task=received_kwargs['task_id'], subtask=received_kwargs['subtask_id'])
+            self.assertEqual(getincome.value, received_kwargs['value'])
+            self.assertEqual(getincome.transaction, received_kwargs['transaction_id'])
+            self.assertEqual(getincome.block_number, received_kwargs['block_number'])
 
         # Try to use the same payment for another subtask
         received_kwargs['subtask_id'] = 's2' + get_some_id()[:-2]
