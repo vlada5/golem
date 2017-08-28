@@ -361,5 +361,6 @@ class PaymentProcessor(Service):
             self._waiting_for_faucet = False
 
     def stop(self):
-        super(PaymentProcessor, self).stop()
-        self.__client._kill_node()
+        if self.running:
+            super(PaymentProcessor, self).stop()
+            self.__client._kill_node()

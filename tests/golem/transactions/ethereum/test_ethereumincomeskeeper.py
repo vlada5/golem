@@ -3,6 +3,7 @@ import random
 import sys
 import uuid
 
+from golem.model import db
 from golem import model
 from golem import testutils
 from golem.transactions.ethereum.ethereumincomeskeeper\
@@ -29,10 +30,10 @@ class TestEthereumIncomesKeeper(testutils.DatabaseFixture, testutils.PEP8MixIn):
     def setUp(self, ):
         super(TestEthereumIncomesKeeper, self).setUp()
         random.seed()
-        processor_old = mock.MagicMock()
-        processor_old.eth_address.return_value = get_receiver_id()
-        processor_old.synchronized.return_value = True
-        self.instance = EthereumIncomesKeeper(processor_old)
+        processor = mock.MagicMock()
+        processor.eth_address.return_value = get_receiver_id()
+        processor.synchronized.return_value = True
+        self.instance = EthereumIncomesKeeper(processor)
 
 
         # client = mock.MagicMock()
@@ -164,14 +165,53 @@ class TestEthereumIncomesKeeper(testutils.DatabaseFixture, testutils.PEP8MixIn):
             },
         ]
 
-        self.instance.received(**received_kwargs)
-        self.assertEqual(
-            1,
-            model.Income.select().where(
-                model.Income.subtask == received_kwargs['subtask_id']
-            )
-            .count()
+        inco = self.instance.received(**received_kwargs)
+
+        from golem.model import Income
+        # with db.atomic():
+        #     getincome = Income.get(sender_node=received_kwargs['sender_node_id'], task=received_kwargs['task_id'], subtask=received_kwargs['subtask_id'])
+        #     x =3
+
+        income = model.Income.select().where(
+                model.Income.subtask == received_kwargs['subtask_id'])
+
+        # self.assertEqual(
+        #     1,
+        #     model.Income.select().where(
+        #         model.Income.subtask == received_kwargs['subtask_id']
+        #     )
+        #     .count()
+        # )
+
+        import time
+        BIG_INT = 2 ** 63 - 1  # (9,223,372,036,854,775,807)
+        def generate_some_id(prefix='test'):
+            return "%s-%d-%d" % (prefix, time.time() * 1000, random.random() * 1000)
+
+        sender_node_id = generate_some_id('sender_node_id')
+        task_id = generate_some_id('task_id')
+        subtask_id = generate_some_id('subtask_id')
+        value = random.randint(BIG_INT+1, BIG_INT+10)
+        transaction_id = generate_some_id('transaction_id')
+        block_number = random.randint(0, sys.maxsize)
+
+        from golem.transactions.incomeskeeper import IncomesKeeper
+
+        incomes_keeper = IncomesKeeper()
+        income2 = incomes_keeper.received(
+            sender_node_id=sender_node_id,
+            task_id=task_id,
+            subtask_id=subtask_id,
+            transaction_id=transaction_id,
+            block_number=block_number,
+            value=value
         )
+
+        with db.atomic():
+            income = Income.get(sender_node=sender_node_id, task=task_id, subtask=subtask_id)
+        self.assertEqual(income.value, value)
+        self.assertEqual(income.transaction, transaction_id)
+        self.assertEqual(income.block_number, block_number)
 
         # Try to use the same payment for another subtask
         received_kwargs['subtask_id'] = 's2' + get_some_id()[:-2]

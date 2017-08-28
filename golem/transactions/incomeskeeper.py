@@ -48,8 +48,12 @@ class IncomesKeeper(object):
                     continue
                 expected_income.delete_instance()
 
-    def received(self, sender_node_id, task_id, subtask_id, transaction_id,
-                 block_number, value):
+    def received(self, sender_node_id,
+                 task_id,
+                 subtask_id,
+                 transaction_id,
+                 block_number,
+                 value):
 
         try:
             with db.transaction():

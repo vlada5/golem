@@ -70,11 +70,9 @@ class TestEthereumTransactionSystem(TestWithDatabase, LogTestCase,
         e = EthereumTransactionSystem(self.tempdir, PRIV_KEY)
         assert e.get_balance() == (None, None, None)
 
-
     import mock
     @mock.patch('golem.transactions.service.Service.running', new_callable=mock.PropertyMock)
     def test_stop(self, mock_is_service_running):
-        mock_is_service_running.return_value = True
 
         pkg = 'golem.ethereum.'
 
@@ -84,31 +82,28 @@ class TestEthereumTransactionSystem(TestWithDatabase, LogTestCase,
             self.web3 = MagicMock()
 
 
-        with patch(pkg + 'paymentprocessor.PaymentProcessor.start'), \
-                patch('twisted.internet.task.LoopingCall.stop'), \
-                patch(pkg + 'client.Client._kill_node'), \
-                patch(pkg + 'node.NodeProcess.start'), \
-                patch(pkg + 'node.NodeProcess.__init__', init), \
-                patch('web3.providers.rpc.HTTPProvider.__init__', init):
+        with patch('twisted.internet.task.LoopingCall.start'), \
+                 patch('twisted.internet.task.LoopingCall.stop'), \
+                 patch(pkg + 'node.NodeProcess.start'), \
+                 patch(pkg + 'node.NodeProcess.stop'), \
+                 patch(pkg + 'node.NodeProcess.__init__', init), \
+                 patch('web3.providers.rpc.HTTPProvider.__init__', init):
 
-            e = EthereumTransactionSystem(self.tempdir, PRIV_KEY)
-
-            assert e.incomes_keeper.processor._PaymentProcessor__client.node.start.called
-            assert e.incomes_keeper.processor.start.called
-
-            assert not e.incomes_keeper.processor._PaymentProcessor__client._kill_node.called
-            assert not e.incomes_keeper.processor._loopingCall.stop.called
 
             mock_is_service_running.return_value = False
-            with self.assertRaisesRegexp(RuntimeError, "service not started"):
-                e.stop()
+            e = EthereumTransactionSystem(self.tempdir, PRIV_KEY)
+            assert e.incomes_keeper.processor._loopingCall.start.called
+            assert e.incomes_keeper.processor._PaymentProcessor__client.node.start.called
 
-            assert not e.incomes_keeper.processor._PaymentProcessor__client._kill_node.called
+
+            mock_is_service_running.return_value = False
+            e.stop()
+            assert not e.incomes_keeper.processor._PaymentProcessor__client.node.stop.called
             assert not e.incomes_keeper.processor._loopingCall.stop.called
+
 
             mock_is_service_running.return_value = True
             e.stop()
-
-            assert e.incomes_keeper.processor._PaymentProcessor__client._kill_node.called
+            assert e.incomes_keeper.processor._PaymentProcessor__client.node == None
             assert e.incomes_keeper.processor._loopingCall.stop.called
 

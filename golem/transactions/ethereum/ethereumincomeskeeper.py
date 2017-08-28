@@ -20,11 +20,15 @@ class EthereumIncomesKeeper(IncomesKeeper):
         self.processor.start()
 
     def stop(self):
-         if self.processor.running:
-            self.processor.stop()
+        self.processor.stop()
 
-    def received(self, sender_node_id, task_id, subtask_id, transaction_id,
-                 block_number, value):
+    def received(self,
+                 sender_node_id,
+                 task_id,
+                 subtask_id,
+                 transaction_id,
+                 block_number,
+                 value):
         my_address = self.processor.eth_address()
         logger.debug('MY ADDRESS: %r', my_address)
 
